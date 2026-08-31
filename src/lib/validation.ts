@@ -6,8 +6,16 @@ import {
   USER_ROLES,
 } from "@/lib/types";
 
-const optionalUrl = z
-  .union([z.url("Enter a valid image URL"), z.literal("")])
+const uploadedImage = z
+  .string()
+  .max(2_800_000, "The image is too large")
+  .regex(
+    /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/,
+    "Upload a JPG, PNG, WebP, or GIF image",
+  );
+
+const optionalImage = z
+  .union([uploadedImage, z.literal("")])
   .optional()
   .transform((value) => value || undefined);
 
@@ -32,7 +40,7 @@ const itemFields = z.object({
   location: z.string().trim().min(2, "Location is required").max(120),
   occurredAt: dateString,
   status: z.enum(ITEM_STATUSES),
-  imageUrl: optionalUrl,
+  imageUrl: optionalImage,
   reporterId: objectId,
 });
 

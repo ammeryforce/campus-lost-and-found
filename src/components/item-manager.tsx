@@ -1,15 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Icon } from "@/components/icons";
 import { EmptyState, FormActions, Modal, Notice, SearchField, StatusBadge } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import { ITEM_CATEGORIES, ITEM_STATUSES, type Item, type User } from "@/lib/types";
 
 const categoryMarks: Record<string, string> = { Electronics: "⌁", "Books & Notes": "Aa", Clothing: "◇", Keys: "⌘", "Cards & IDs": "▣", Bags: "⌂", Other: "?" };
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+
+// FileReader changes a selected image file into text that can be saved in MongoDB.
+function readImageFile(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("The image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
 
 function ItemForm({ item, users, busy, error, onClose, onSaved }: { item: Item | null; users: User[]; busy: boolean; error: string; onClose: () => void; onSaved: (event: FormEvent<HTMLFormElement>) => void }) {
+  const [imagePreview, setImagePreview] = useState(item?.imageUrl || "");
+
+  function previewImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   return (
     <form className="resource-form" onSubmit={onSaved}>
       {error && <Notice message={error} />}
@@ -26,7 +49,24 @@ function ItemForm({ item, users, busy, error, onClose, onSaved }: { item: Item |
         <label><span>Status</span><select name="status" defaultValue={item?.status || "found"}>{ITEM_STATUSES.map((status) => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select></label>
         <label><span>Reported by</span><select name="reporterId" required defaultValue={item?.reporterId || users[0]?.id || ""}><option value="" disabled>Choose a person</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}</select></label>
       </div>
-      <label><span>Image URL <em>optional</em></span><input name="imageUrl" type="url" defaultValue={item?.imageUrl} placeholder="https://example.com/item-photo.jpg" /></label>
+      <label>
+        <span>Item photo <em>optional</em></span>
+        <input
+          name="imageFile"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          onChange={previewImage}
+        />
+        <small>Choose a JPG, PNG, WebP, or GIF image smaller than 2 MB.</small>
+      </label>
+      {imagePreview && (
+        <div
+          className="image-upload-preview"
+          role="img"
+          aria-label="Selected item preview"
+          style={{ backgroundImage: `url("${imagePreview.replace(/["\\]/g, "")}")` }}
+        />
+      )}
       <FormActions busy={busy} onCancel={onClose} submitLabel={item ? "Save changes" : "Create report"} />
     </form>
   );
@@ -107,11 +147,26 @@ export function ItemManager() {
     setFormError("");
 
     const formData = new FormData(event.currentTarget);
+    const imageFile = formData.get("imageFile");
+    formData.delete("imageFile");
+
     const body = Object.fromEntries(formData);
     const url = editing ? `/api/items/${editing.id}` : "/api/items";
     const method = editing ? "PATCH" : "POST";
 
     try {
+      if (imageFile instanceof File && imageFile.size > 0) {
+        if (!imageFile.type.startsWith("image/")) {
+          throw new Error("Please choose an image file.");
+        }
+
+        if (imageFile.size > MAX_IMAGE_SIZE) {
+          throw new Error("The image must be smaller than 2 MB.");
+        }
+
+        body.imageUrl = await readImageFile(imageFile);
+      }
+
       await apiRequest<Item>(url, {
         method,
         body: JSON.stringify(body),

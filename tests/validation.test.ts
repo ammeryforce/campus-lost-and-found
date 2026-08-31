@@ -47,6 +47,15 @@ describe("item validation", () => {
     expect(createItemSchema.parse(item)).toMatchObject({ name: "Black umbrella", imageUrl: undefined });
   });
 
+  it("accepts an uploaded image and rejects a normal text URL", () => {
+    const uploadedImage = "data:image/png;base64,AA==";
+
+    expect(createItemSchema.parse({ ...item, imageUrl: uploadedImage }).imageUrl)
+      .toBe(uploadedImage);
+    expect(() => createItemSchema.parse({ ...item, imageUrl: "https://example.com/photo.jpg" }))
+      .toThrow();
+  });
+
   it("rejects a short description and invalid update status", () => {
     expect(() => createItemSchema.parse({ ...item, description: "black" })).toThrow();
     expect(() => updateItemSchema.parse({ status: "in storage" })).toThrow();

@@ -45,6 +45,12 @@ When a form is submitted, the component runs `saveUser`.
 
 Items and claims follow the same pattern in their own manager components.
 
+### Item photo upload
+
+The item form uses a normal file input instead of asking for an internet URL. The `readImageFile` function in `item-manager.tsx` converts the selected file to a data URL (a long text representation of the image). That text is sent with the item and saved in MongoDB as `imageUrl`.
+
+Images are limited to 2 MB. The item page and claim page read the same field, so one saved photo appears in both places.
+
 ## 4. How delete works
 
 The delete button first asks for confirmation. It then sends:

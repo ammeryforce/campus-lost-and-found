@@ -90,7 +90,7 @@ The database name defaults to `campus_lost_found`. It contains:
 | `occurredAt` | date | Date of the event |
 | `status` | string | `lost`, `found`, or `returned` |
 | `recordStatus` | string | Soft-delete state: `ACTIVE` or `DELETED` (defaults to `ACTIVE`) |
-| `imageUrl` | string | Optional external image URL |
+| `imageUrl` | string | Optional uploaded image stored as a data URL |
 | `reporterId` | ObjectId | Reference to a user |
 
 ### `claims`
@@ -129,6 +129,8 @@ curl -X POST http://localhost:3000/api/users \
 - `/items` contains item search, filters, cards, and the report form.
 - `/claims` contains the review queue and approval controls.
 - `/users` contains the campus people directory.
+
+The item form accepts a JPG, PNG, WebP, or GIF file smaller than 2 MB. The browser converts the file to a data URL, MongoDB saves it with the item, and the same photo appears on both the item card and its claim card.
 
 The interface will still open when MongoDB is not configured, but it shows a setup message instead of data.
 

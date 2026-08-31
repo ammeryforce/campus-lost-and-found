@@ -168,7 +168,21 @@ export function ClaimManager() {
             return (
               <article className="claim-card" key={claim.id}>
                 <div className="claim-person"><span className="person-avatar">{(claimant?.name || "U").split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><div><small>Claim submitted by</small><h2>{claimant?.name || "Unknown person"}</h2><span>{claimant?.email || "Profile unavailable"}</span></div></div>
-                <div className="claim-item"><small>Item requested</small><strong>{item?.name || "Unknown item"}</strong><span><Icon name="pin" /> {item?.location || "Unknown location"}</span></div>
+                <div className="claim-item">
+                  {item?.imageUrl && (
+                    <div
+                      className="claim-item-photo"
+                      role="img"
+                      aria-label={`Photo of ${item.name}`}
+                      style={{
+                        backgroundImage: `url("${item.imageUrl.replace(/["\\]/g, "")}")`,
+                      }}
+                    />
+                  )}
+                  <small>Item requested</small>
+                  <strong>{item?.name || "Unknown item"}</strong>
+                  <span><Icon name="pin" /> {item?.location || "Unknown location"}</span>
+                </div>
                 <blockquote>“{claim.description}”</blockquote>
                 <div className="claim-state"><StatusBadge status={claim.status} /><small><Icon name="clock" /> {new Date(claim.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>
                 <div className="claim-actions">

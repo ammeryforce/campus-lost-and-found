@@ -4,9 +4,9 @@ import {
   jsonData,
   jsonError,
   parseId,
-  readJson,
   serializeUser,
 } from "@/lib/api";
+import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { updateUserSchema } from "@/lib/validation";
 
 type Context = { params: Promise<{ id: string }> };
@@ -31,7 +31,8 @@ export async function PATCH(request: Request, context: Context) {
     const objectId = parseId(id);
     if (!objectId) return jsonError("User not found.", 404);
 
-    const input = await readJson(request, updateUserSchema);
+    const body = await request.json();
+    const input = updateUserSchema.parse(body);
     const { users } = await getCollections();
     const user = await users.findOneAndUpdate(
       { _id: objectId },
@@ -45,8 +46,6 @@ export async function PATCH(request: Request, context: Context) {
   }
 }
 
-export const PUT = PATCH;
-
 export async function DELETE(_request: Request, context: Context) {
   try {
     const { id } = await context.params;
@@ -55,7 +54,10 @@ export async function DELETE(_request: Request, context: Context) {
 
     const { users, items, claims } = await getCollections();
     const [reportedItem, claim] = await Promise.all([
-      items.findOne({ reporterId: objectId }, { projection: { _id: 1 } }),
+      items.findOne(
+        { reporterId: objectId, ...ACTIVE_ITEM_FILTER },
+        { projection: { _id: 1 } },
+      ),
       claims.findOne({ claimantId: objectId }, { projection: { _id: 1 } }),
     ]);
 

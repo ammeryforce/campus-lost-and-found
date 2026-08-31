@@ -2,7 +2,6 @@ import { getCollections } from "@/lib/database";
 import {
   handleApiError,
   jsonData,
-  readJson,
   serializeUser,
 } from "@/lib/api";
 import { createUserSchema } from "@/lib/validation";
@@ -19,7 +18,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const input = await readJson(request, createUserSchema);
+    const body = await request.json();
+    const input = createUserSchema.parse(body);
     const { users } = await getCollections();
     const now = new Date();
     const document = { ...input, createdAt: now, updatedAt: now };

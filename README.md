@@ -4,6 +4,8 @@ Findly is a full-stack campus lost-property system. Students and staff can be re
 
 The project demonstrates complete CRUD operations with Next.js route handlers, MongoDB, and a browser UI.
 
+If you are learning the code, start with [BEGINNER_GUIDE.md](BEGINNER_GUIDE.md). It explains the folders and follows one user request from the form to MongoDB and back.
+
 ## What is included
 
 - A polished, mobile-friendly overview dashboard.
@@ -87,6 +89,7 @@ The database name defaults to `campus_lost_found`. It contains:
 | `location` | string | Where it was lost or found |
 | `occurredAt` | date | Date of the event |
 | `status` | string | `lost`, `found`, or `returned` |
+| `recordStatus` | string | Soft-delete state: `ACTIVE` or `DELETED` (defaults to `ACTIVE`) |
 | `imageUrl` | string | Optional external image URL |
 | `reporterId` | ObjectId | Reference to a user |
 
@@ -105,18 +108,12 @@ All responses use either `{ "data": ... }` or `{ "error": "..." }`.
 
 | Resource | List / create | Read / update / delete |
 | --- | --- | --- |
-| Users | `GET, POST /api/users` | `GET, PATCH, PUT, DELETE /api/users/:id` |
-| Items | `GET, POST /api/items` | `GET, PATCH, PUT, DELETE /api/items/:id` |
-| Claims | `GET, POST /api/claims` | `GET, PATCH, PUT, DELETE /api/claims/:id` |
+| Users | `GET, POST /api/users` | `GET, PATCH, DELETE /api/users/:id` |
+| Items | `GET, POST /api/items` | `GET, PATCH, DELETE /api/items/:id` |
+| Claims | `GET, POST /api/claims` | `GET, PATCH, DELETE /api/claims/:id` |
 | Health | `GET /api/health` | Checks the MongoDB connection |
 
-Item list filters are available as query parameters:
-
-```text
-/api/items?search=wallet&status=found&category=Cards%20%26%20IDs
-```
-
-Claim list filters support `status`, `itemId`, and `claimantId`.
+Search and filter controls are handled in the browser after the records load. This keeps the first version of the API easy to read.
 
 Example — create a user:
 
@@ -160,6 +157,7 @@ Suggested manual test order:
 5. Approve the claim and verify the item changes to `returned`.
 6. Try deleting a user linked to an item; the API should protect the record.
 7. Delete the claim, item, and user in that order.
+8. After deleting an item, refresh `/items` and confirm it remains hidden while its MongoDB document has `recordStatus: "DELETED"`.
 
 ## Stage 6 — Prepare and deploy to a VM
 
@@ -215,6 +213,7 @@ src/
   components/            Dashboard and CRUD interface components
   lib/                   MongoDB, validation, types, and API helpers
 tests/                   Automated validation tests
+BEGINNER_GUIDE.md        Plain-language walkthrough of the code
 deploy/nginx.conf        VM reverse-proxy configuration
 Dockerfile               Production Next.js image
 compose.yaml             App, MongoDB, and Nginx services

@@ -1,39 +1,23 @@
-import type { Filter } from "mongodb";
 import { getCollections } from "@/lib/database";
 import {
-  escapeRegex,
   handleApiError,
   jsonData,
   jsonError,
   parseId,
-  readJson,
   serializeItem,
 } from "@/lib/api";
-import type { ItemDocument } from "@/lib/types";
-import { ITEM_CATEGORIES, ITEM_STATUSES } from "@/lib/types";
+import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { createItemSchema } from "@/lib/validation";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const url = new URL(request.url);
-    const search = url.searchParams.get("search")?.trim();
-    const status = url.searchParams.get("status");
-    const category = url.searchParams.get("category");
-    const filter: Filter<ItemDocument> = {};
-
-    if (status && ITEM_STATUSES.includes(status as (typeof ITEM_STATUSES)[number])) {
-      filter.status = status as ItemDocument["status"];
-    }
-    if (category && ITEM_CATEGORIES.includes(category as (typeof ITEM_CATEGORIES)[number])) {
-      filter.category = category as ItemDocument["category"];
-    }
-    if (search) {
-      const pattern = new RegExp(escapeRegex(search), "i");
-      filter.$or = [{ name: pattern }, { description: pattern }, { location: pattern }];
-    }
-
     const { items } = await getCollections();
-    const documents = await items.find(filter).sort({ occurredAt: -1 }).limit(200).toArray();
+    const documents = await items
+      .find(ACTIVE_ITEM_FILTER)
+      .sort({ occurredAt: -1 })
+      .limit(200)
+      .toArray();
+
     return jsonData(documents.map(serializeItem));
   } catch (error) {
     return handleApiError(error);
@@ -42,7 +26,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const input = await readJson(request, createItemSchema);
+    const body = await request.json();
+    const input = createItemSchema.parse(body);
     const reporterId = parseId(input.reporterId);
     if (!reporterId) return jsonError("Reporter not found.", 404);
 
@@ -53,6 +38,7 @@ export async function POST(request: Request) {
     const now = new Date();
     const document = {
       ...input,
+      recordStatus: "ACTIVE" as const,
       reporterId,
       occurredAt: new Date(input.occurredAt),
       createdAt: now,

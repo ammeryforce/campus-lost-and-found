@@ -1,6 +1,6 @@
 import { MongoServerError, ObjectId, type WithId } from "mongodb";
 import { NextResponse } from "next/server";
-import { ZodError, type ZodType } from "zod";
+import { ZodError } from "zod";
 import type {
   ApiResponse,
   Claim,
@@ -13,18 +13,6 @@ import type {
 
 export function parseId(id: string): ObjectId | null {
   return ObjectId.isValid(id) ? new ObjectId(id) : null;
-}
-
-export async function readJson<T>(request: Request, schema: ZodType<T>): Promise<T> {
-  let body: unknown;
-
-  try {
-    body = await request.json();
-  } catch {
-    throw new SyntaxError("Request body must be valid JSON");
-  }
-
-  return schema.parse(body);
 }
 
 export function jsonData<T>(data: T, status = 200) {
@@ -83,6 +71,7 @@ export function serializeItem(document: WithId<ItemDocument>): Item {
     location: document.location,
     occurredAt: document.occurredAt.toISOString(),
     status: document.status,
+    recordStatus: document.recordStatus ?? "ACTIVE",
     imageUrl: document.imageUrl,
     reporterId: document.reporterId.toHexString(),
     createdAt: document.createdAt.toISOString(),
@@ -100,8 +89,4 @@ export function serializeClaim(document: WithId<ClaimDocument>): Claim {
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
   };
-}
-
-export function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

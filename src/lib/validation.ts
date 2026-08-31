@@ -6,11 +6,6 @@ import {
   USER_ROLES,
 } from "@/lib/types";
 
-const nonEmptyUpdate = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
-  schema.partial().refine((value) => Object.keys(value).length > 0, {
-    message: "Provide at least one field to update",
-  });
-
 const optionalUrl = z
   .union([z.url("Enter a valid image URL"), z.literal("")])
   .optional()
@@ -52,9 +47,19 @@ const claimFields = z.object({
 });
 
 export const createUserSchema = userFields;
-export const updateUserSchema = nonEmptyUpdate(userFields);
+export const updateUserSchema = userFields
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
 export const createItemSchema = itemFields;
-export const updateItemSchema = nonEmptyUpdate(itemFields);
+export const updateItemSchema = itemFields
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "Provide at least one field to update",
+  });
+
 export const createClaimSchema = claimFields;
 export const updateClaimSchema = z
   .object({

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { Notice, StatusBadge } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
@@ -21,14 +21,32 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([apiRequest<Item[]>("/api/items"), apiRequest<Claim[]>("/api/claims"), apiRequest<User[]>("/api/users")])
-      .then(([itemData, claimData, userData]) => { setItems(itemData); setClaims(claimData); setUsers(userData); })
-      .catch((requestError: Error) => setError(requestError.message))
-      .finally(() => setLoading(false));
+    async function loadDashboard() {
+      try {
+        const itemData = await apiRequest<Item[]>("/api/items");
+        const claimData = await apiRequest<Claim[]>("/api/claims");
+        const userData = await apiRequest<User[]>("/api/users");
+
+        setItems(itemData);
+        setClaims(claimData);
+        setUsers(userData);
+      } catch (requestError) {
+        setError((requestError as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadDashboard();
   }, []);
 
-  const userNames = useMemo(() => new Map(users.map((user) => [user.id, user.name])), [users]);
-  const itemNames = useMemo(() => new Map(items.map((item) => [item.id, item.name])), [items]);
+  function getUserName(userId: string) {
+    return users.find((user) => user.id === userId)?.name || "Unknown user";
+  }
+
+  function getItemName(itemId: string) {
+    return items.find((item) => item.id === itemId)?.name || "Unknown item";
+  }
   const returned = items.filter((item) => item.status === "returned").length;
   const openItems = items.filter((item) => item.status !== "returned").length;
   const pendingClaims = claims.filter((claim) => claim.status === "pending").length;
@@ -81,7 +99,7 @@ export function Dashboard() {
           <div className="section-heading"><div><p className="eyebrow">Needs attention</p><h2>Claim queue</h2></div><Link href="/claims">Manage</Link></div>
           <div className="claim-mini-list">
             {claims.slice(0, 4).map((claim) => (
-              <article key={claim.id}><span className="mini-avatar">{(userNames.get(claim.claimantId) || "U").slice(0, 1)}</span><div><strong>{userNames.get(claim.claimantId) || "Unknown user"}</strong><small>{itemNames.get(claim.itemId) || "Unknown item"}</small></div><StatusBadge status={claim.status} /></article>
+              <article key={claim.id}><span className="mini-avatar">{getUserName(claim.claimantId).slice(0, 1)}</span><div><strong>{getUserName(claim.claimantId)}</strong><small>{getItemName(claim.itemId)}</small></div><StatusBadge status={claim.status} /></article>
             ))}
             {!loading && claims.length === 0 && <p className="muted">The claim queue is clear.</p>}
           </div>

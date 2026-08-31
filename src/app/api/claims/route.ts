@@ -1,40 +1,23 @@
-import type { Filter } from "mongodb";
 import { getCollections } from "@/lib/database";
 import {
   handleApiError,
   jsonData,
   jsonError,
   parseId,
-  readJson,
   serializeClaim,
 } from "@/lib/api";
-import { CLAIM_STATUSES, type ClaimDocument } from "@/lib/types";
+import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { createClaimSchema } from "@/lib/validation";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const url = new URL(request.url);
-    const status = url.searchParams.get("status");
-    const itemId = url.searchParams.get("itemId");
-    const claimantId = url.searchParams.get("claimantId");
-    const filter: Filter<ClaimDocument> = {};
-
-    if (status && CLAIM_STATUSES.includes(status as (typeof CLAIM_STATUSES)[number])) {
-      filter.status = status as ClaimDocument["status"];
-    }
-    if (itemId) {
-      const parsed = parseId(itemId);
-      if (!parsed) return jsonError("Invalid item filter.", 400);
-      filter.itemId = parsed;
-    }
-    if (claimantId) {
-      const parsed = parseId(claimantId);
-      if (!parsed) return jsonError("Invalid claimant filter.", 400);
-      filter.claimantId = parsed;
-    }
-
     const { claims } = await getCollections();
-    const documents = await claims.find(filter).sort({ createdAt: -1 }).limit(200).toArray();
+    const documents = await claims
+      .find()
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray();
+
     return jsonData(documents.map(serializeClaim));
   } catch (error) {
     return handleApiError(error);
@@ -43,14 +26,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const input = await readJson(request, createClaimSchema);
+    const body = await request.json();
+    const input = createClaimSchema.parse(body);
     const itemId = parseId(input.itemId);
     const claimantId = parseId(input.claimantId);
     if (!itemId || !claimantId) return jsonError("Item or claimant not found.", 404);
 
     const { users, items, claims } = await getCollections();
     const [item, claimant] = await Promise.all([
-      items.findOne({ _id: itemId }),
+      items.findOne({ _id: itemId, ...ACTIVE_ITEM_FILTER }),
       users.findOne({ _id: claimantId }, { projection: { _id: 1 } }),
     ]);
     if (!item || !claimant) return jsonError("Item or claimant not found.", 404);

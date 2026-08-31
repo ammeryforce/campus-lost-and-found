@@ -2,6 +2,7 @@ import type { ObjectId } from "mongodb";
 
 export const USER_ROLES = ["student", "staff", "admin"] as const;
 export const ITEM_STATUSES = ["lost", "found", "returned"] as const;
+export const ITEM_RECORD_STATUSES = ["ACTIVE", "DELETED"] as const;
 export const ITEM_CATEGORIES = [
   "Electronics",
   "Books & Notes",
@@ -15,6 +16,7 @@ export const CLAIM_STATUSES = ["pending", "approved", "rejected"] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
+export type ItemRecordStatus = (typeof ITEM_RECORD_STATUSES)[number];
 export type ItemCategory = (typeof ITEM_CATEGORIES)[number];
 export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
 
@@ -33,6 +35,8 @@ export interface ItemDocument {
   location: string;
   occurredAt: Date;
   status: ItemStatus;
+  /** Missing on records created before soft deletion was introduced. */
+  recordStatus?: ItemRecordStatus;
   imageUrl?: string;
   reporterId: ObjectId;
   createdAt: Date;
@@ -48,33 +52,41 @@ export interface ClaimDocument {
   updatedAt: Date;
 }
 
-export type User = Omit<UserDocument, "createdAt" | "updatedAt"> & {
+// These three interfaces describe the JSON sent to the browser.
+// MongoDB ObjectIds and Dates are changed to strings before they are returned.
+export interface User {
   id: string;
+  name: string;
+  email: string;
+  role: UserRole;
   createdAt: string;
   updatedAt: string;
-};
+}
 
-export type Item = Omit<
-  ItemDocument,
-  "reporterId" | "occurredAt" | "createdAt" | "updatedAt"
-> & {
+export interface Item {
   id: string;
+  name: string;
+  description: string;
+  category: ItemCategory;
+  location: string;
+  status: ItemStatus;
+  recordStatus: ItemRecordStatus;
+  imageUrl?: string;
   reporterId: string;
   occurredAt: string;
   createdAt: string;
   updatedAt: string;
-};
+}
 
-export type Claim = Omit<
-  ClaimDocument,
-  "itemId" | "claimantId" | "createdAt" | "updatedAt"
-> & {
+export interface Claim {
   id: string;
   itemId: string;
   claimantId: string;
+  description: string;
+  status: ClaimStatus;
   createdAt: string;
   updatedAt: string;
-};
+}
 
 export interface ApiResponse<T> {
   data?: T;

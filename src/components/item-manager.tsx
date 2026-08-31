@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Icon } from "@/components/icons";
 import { EmptyState, FormActions, Modal, Notice, SearchField, StatusBadge } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
@@ -48,8 +48,12 @@ export function ItemManager() {
 
   const loadData = useCallback(async () => {
     try {
-      const [itemData, userData] = await Promise.all([apiRequest<Item[]>("/api/items"), apiRequest<User[]>("/api/users")]);
-      setItems(itemData); setUsers(userData); setError("");
+      const itemData = await apiRequest<Item[]>("/api/items");
+      const userData = await apiRequest<User[]>("/api/users");
+
+      setItems(itemData);
+      setUsers(userData);
+      setError("");
     } catch (requestError) {
       setError((requestError as Error).message);
     } finally {
@@ -65,33 +69,78 @@ export function ItemManager() {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
-  const names = useMemo(() => new Map(users.map((user) => [user.id, user.name])), [users]);
+  function getReporterName(reporterId: string) {
+    const reporter = users.find((user) => user.id === reporterId);
+    return reporter?.name || "Unknown user";
+  }
+
   const filteredItems = items.filter((item) => {
     const phrase = `${item.name} ${item.description} ${item.location}`.toLowerCase();
-    return phrase.includes(search.toLowerCase()) && (status === "all" || item.status === status) && (category === "all" || item.category === category);
+    const matchesSearch = phrase.includes(search.toLowerCase());
+    const matchesStatus = status === "all" || item.status === status;
+    const matchesCategory = category === "all" || item.category === category;
+
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  function openCreate() { setEditing(null); setFormError(""); setFormOpen(true); }
-  function openEdit(item: Item) { setEditing(item); setFormError(""); setFormOpen(true); }
-  function closeForm() { if (!busy) setFormOpen(false); }
+  function openCreate() {
+    setEditing(null);
+    setFormError("");
+    setFormOpen(true);
+  }
+
+  function openEdit(item: Item) {
+    setEditing(item);
+    setFormError("");
+    setFormOpen(true);
+  }
+
+  function closeForm() {
+    if (!busy) {
+      setFormOpen(false);
+    }
+  }
 
   async function saveItem(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setBusy(true); setFormError("");
-    const body = Object.fromEntries(new FormData(event.currentTarget));
+    event.preventDefault();
+    setBusy(true);
+    setFormError("");
+
+    const formData = new FormData(event.currentTarget);
+    const body = Object.fromEntries(formData);
+    const url = editing ? `/api/items/${editing.id}` : "/api/items";
+    const method = editing ? "PATCH" : "POST";
+
     try {
-      await apiRequest<Item>(editing ? `/api/items/${editing.id}` : "/api/items", { method: editing ? "PATCH" : "POST", body: JSON.stringify(body) });
-      setFormOpen(false); setSuccess(editing ? "Item report updated." : "Item report created."); await loadData();
+      await apiRequest<Item>(url, {
+        method,
+        body: JSON.stringify(body),
+      });
+
+      setFormOpen(false);
+      setSuccess(editing ? "Item report updated." : "Item report created.");
+      await loadData();
     } catch (requestError) {
       setFormError((requestError as Error).message);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function deleteItem(item: Item) {
-    if (!window.confirm(`Delete the report for “${item.name}”? This cannot be undone.`)) return;
+    const confirmed = window.confirm(
+      `Delete the report for “${item.name}”? It will disappear from active reports.`,
+    );
+
+    if (!confirmed) return;
+
     try {
       await apiRequest<{ deleted: boolean }>(`/api/items/${item.id}`, { method: "DELETE" });
-      setSuccess("Item report deleted."); await loadData();
-    } catch (requestError) { setError((requestError as Error).message); }
+      setSuccess("Item report deleted and hidden from active reports.");
+      await loadData();
+    } catch (requestError) {
+      setError((requestError as Error).message);
+    }
   }
 
   return (
@@ -121,7 +170,7 @@ export function ItemManager() {
                 <div className="item-card-title"><div><small>{item.category}</small><h2>{item.name}</h2></div><div className="card-actions"><button className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}><Icon name="edit" /></button><button className="icon-button danger" onClick={() => void deleteItem(item)} aria-label={`Delete ${item.name}`}><Icon name="trash" /></button></div></div>
                 <p>{item.description}</p>
                 <div className="item-facts"><span><Icon name="pin" /> {item.location}</span><span><Icon name="calendar" /> {new Date(item.occurredAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></div>
-                <div className="reported-by"><span className="mini-avatar">{(names.get(item.reporterId) || "U")[0]}</span><span>Reported by <strong>{names.get(item.reporterId) || "Unknown user"}</strong></span><Link href={`/claims?item=${item.id}&new=1`}>Claim <Icon name="arrow" /></Link></div>
+                <div className="reported-by"><span className="mini-avatar">{getReporterName(item.reporterId)[0]}</span><span>Reported by <strong>{getReporterName(item.reporterId)}</strong></span><Link href={`/claims?item=${item.id}&new=1`}>Claim <Icon name="arrow" /></Link></div>
               </div>
             </article>
           ))}

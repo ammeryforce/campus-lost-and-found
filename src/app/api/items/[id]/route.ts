@@ -4,9 +4,9 @@ import {
   jsonData,
   jsonError,
   parseId,
-  readJson,
   serializeItem,
 } from "@/lib/api";
+import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { updateItemSchema } from "@/lib/validation";
 
 type Context = { params: Promise<{ id: string }> };
@@ -18,7 +18,7 @@ export async function GET(_request: Request, context: Context) {
     if (!objectId) return jsonError("Item not found.", 404);
 
     const { items } = await getCollections();
-    const item = await items.findOne({ _id: objectId });
+    const item = await items.findOne({ _id: objectId, ...ACTIVE_ITEM_FILTER });
     return item ? jsonData(serializeItem(item)) : jsonError("Item not found.", 404);
   } catch (error) {
     return handleApiError(error);
@@ -31,7 +31,8 @@ export async function PATCH(request: Request, context: Context) {
     const objectId = parseId(id);
     if (!objectId) return jsonError("Item not found.", 404);
 
-    const input = await readJson(request, updateItemSchema);
+    const body = await request.json();
+    const input = updateItemSchema.parse(body);
     const updates: Record<string, unknown> = { ...input, updatedAt: new Date() };
     if (input.occurredAt) updates.occurredAt = new Date(input.occurredAt);
 
@@ -45,7 +46,7 @@ export async function PATCH(request: Request, context: Context) {
     }
 
     const item = await items.findOneAndUpdate(
-      { _id: objectId },
+      { _id: objectId, ...ACTIVE_ITEM_FILTER },
       { $set: updates },
       { returnDocument: "after" },
     );
@@ -55,8 +56,6 @@ export async function PATCH(request: Request, context: Context) {
     return handleApiError(error);
   }
 }
-
-export const PUT = PATCH;
 
 export async function DELETE(_request: Request, context: Context) {
   try {
@@ -70,10 +69,13 @@ export async function DELETE(_request: Request, context: Context) {
       return jsonError("This item has claims. Delete those claims first.", 409);
     }
 
-    const result = await items.deleteOne({ _id: objectId });
-    return result.deletedCount
-      ? jsonData({ id, deleted: true })
-      : jsonError("Item not found.", 404);
+    const item = await items.findOneAndUpdate(
+      { _id: objectId, ...ACTIVE_ITEM_FILTER },
+      { $set: { recordStatus: "DELETED", updatedAt: new Date() } },
+      { returnDocument: "after" },
+    );
+
+    return item ? jsonData({ id, deleted: true }) : jsonError("Item not found.", 404);
   } catch (error) {
     return handleApiError(error);
   }

@@ -4,9 +4,9 @@ import {
   jsonData,
   jsonError,
   parseId,
-  readJson,
   serializeClaim,
 } from "@/lib/api";
+import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { updateClaimSchema } from "@/lib/validation";
 
 type Context = { params: Promise<{ id: string }> };
@@ -31,7 +31,8 @@ export async function PATCH(request: Request, context: Context) {
     const objectId = parseId(id);
     if (!objectId) return jsonError("Claim not found.", 404);
 
-    const input = await readJson(request, updateClaimSchema);
+    const body = await request.json();
+    const input = updateClaimSchema.parse(body);
     const { items, claims } = await getCollections();
     const existing = await claims.findOne({ _id: objectId });
     if (!existing) return jsonError("Claim not found.", 404);
@@ -39,7 +40,7 @@ export async function PATCH(request: Request, context: Context) {
     if (input.status === "approved") {
       await Promise.all([
         items.updateOne(
-          { _id: existing.itemId },
+          { _id: existing.itemId, ...ACTIVE_ITEM_FILTER },
           { $set: { status: "returned", updatedAt: new Date() } },
         ),
         claims.updateMany(
@@ -60,8 +61,6 @@ export async function PATCH(request: Request, context: Context) {
     return handleApiError(error);
   }
 }
-
-export const PUT = PATCH;
 
 export async function DELETE(_request: Request, context: Context) {
   try {

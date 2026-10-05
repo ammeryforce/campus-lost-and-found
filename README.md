@@ -224,3 +224,5 @@ compose.yaml             App, MongoDB, and Nginx services
 ## Current scope and sensible next additions
 
 This version intentionally focuses on the requested CRUD system. Before a university-wide launch, the next additions should be sign-in, role-based authorization, controlled image uploads, rate limiting, audit logs, email notifications, and automatic database backups.
+add readme
+

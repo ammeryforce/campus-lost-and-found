@@ -24,8 +24,16 @@ export interface UserDocument {
   name: string;
   email: string;
   role: UserRole;
+  passwordHash?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface SessionDocument {
+  userId: ObjectId;
+  tokenHash: string;
+  expiresAt: Date;
+  createdAt: Date;
 }
 
 export interface ItemDocument {

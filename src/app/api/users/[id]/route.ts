@@ -8,11 +8,13 @@ import {
 } from "@/lib/api";
 import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { updateUserSchema } from "@/lib/validation";
+import { requireAdmin, requireUser } from "@/lib/auth";
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: Context) {
   try {
+    await requireUser();
     const { id } = await context.params;
     const objectId = parseId(id);
     if (!objectId) return jsonError("User not found.", 404);
@@ -27,6 +29,7 @@ export async function GET(_request: Request, context: Context) {
 
 export async function PATCH(request: Request, context: Context) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const objectId = parseId(id);
     if (!objectId) return jsonError("User not found.", 404);
@@ -48,6 +51,7 @@ export async function PATCH(request: Request, context: Context) {
 
 export async function DELETE(_request: Request, context: Context) {
   try {
+    await requireAdmin();
     const { id } = await context.params;
     const objectId = parseId(id);
     if (!objectId) return jsonError("User not found.", 404);

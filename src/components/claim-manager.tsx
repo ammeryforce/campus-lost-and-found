@@ -6,8 +6,9 @@ import { Icon } from "@/components/icons";
 import { EmptyState, FormActions, Modal, Notice, SearchField, StatusBadge } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import { CLAIM_STATUSES, type Claim, type Item, type User } from "@/lib/types";
+import type { AuthUser } from "@/lib/auth";
 
-export function ClaimManager() {
+export function ClaimManager({ user }: { user: AuthUser }) {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -186,7 +187,7 @@ export function ClaimManager() {
                 <blockquote>“{claim.description}”</blockquote>
                 <div className="claim-state"><StatusBadge status={claim.status} /><small><Icon name="clock" /> {new Date(claim.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></div>
                 <div className="claim-actions">
-                  {claim.status === "pending" && <><button className="button button-approve" onClick={() => void updateStatus(claim, "approved")}><Icon name="check" /> Approve</button><button className="button button-reject" onClick={() => void updateStatus(claim, "rejected")}><Icon name="close" /> Reject</button></>}
+                  {user.role === "admin" && claim.status === "pending" && <><button className="button button-approve" onClick={() => void updateStatus(claim, "approved")}><Icon name="check" /> Approve</button><button className="button button-reject" onClick={() => void updateStatus(claim, "rejected")}><Icon name="close" /> Reject</button></>}
                   <button className="icon-button" onClick={() => openEdit(claim)} aria-label="Edit claim"><Icon name="edit" /></button><button className="icon-button danger" onClick={() => void deleteClaim(claim)} aria-label="Delete claim"><Icon name="trash" /></button>
                 </div>
               </article>
@@ -202,7 +203,7 @@ export function ClaimManager() {
               {formError && <Notice message={formError} />}
               {!editing && <>
                 <label><span>Item</span><select name="itemId" required defaultValue={preferredItem || ""}><option value="" disabled>Choose an open item</option>{items.filter((item) => item.status !== "returned").map((item) => <option key={item.id} value={item.id}>{item.name} · {item.location}</option>)}</select></label>
-                <label><span>Claimant</span><select name="claimantId" required defaultValue=""><option value="" disabled>Choose a person</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.email}</option>)}</select></label>
+                <label><span>Claimant</span><select name="claimantId" required defaultValue={user.id}>{(user.role === "admin" ? users : users.filter((person) => person.id === user.id)).map((person) => <option key={person.id} value={person.id}>{person.name} · {person.email}</option>)}</select></label>
               </>}
               <label><span>Proof of ownership</span><textarea name="description" required minLength={10} maxLength={1000} rows={5} defaultValue={editing?.description} placeholder="Describe a hidden mark, contents, lock-screen image, serial number, or another detail…" /><small>Do not copy details already shown in the item report.</small></label>
               <FormActions busy={busy} onCancel={closeForm} submitLabel={editing ? "Save details" : "Submit claim"} />

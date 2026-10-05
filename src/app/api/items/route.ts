@@ -8,9 +8,11 @@ import {
 } from "@/lib/api";
 import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { createItemSchema } from "@/lib/validation";
+import { requireUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    await requireUser();
     const { items } = await getCollections();
     const documents = await items
       .find(ACTIVE_ITEM_FILTER)
@@ -26,9 +28,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const currentUser = await requireUser();
     const body = await request.json();
     const input = createItemSchema.parse(body);
-    const reporterId = parseId(input.reporterId);
+    const reporterId = currentUser.role === "admin" ? parseId(input.reporterId) : parseId(currentUser.id);
     if (!reporterId) return jsonError("Reporter not found.", 404);
 
     const { users, items } = await getCollections();

@@ -81,3 +81,12 @@ export const updateClaimSchema = z
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type CreateItemInput = z.infer<typeof createItemSchema>;
 export type CreateClaimInput = z.infer<typeof createClaimSchema>;
+
+export const credentialsSchema = z.object({
+  email: z.email("Enter a valid email address").trim().toLowerCase(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
+});
+
+export const registerSchema = credentialsSchema.extend({
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
+});

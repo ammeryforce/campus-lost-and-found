@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { EmptyState, FormActions, Modal, Notice, SearchField, StatusBadge } from "@/components/ui";
 import { apiRequest } from "@/lib/api-client";
 import { ITEM_CATEGORIES, ITEM_STATUSES, type Item, type User } from "@/lib/types";
+import type { AuthUser } from "@/lib/auth";
 
 const categoryMarks: Record<string, string> = { Electronics: "⌁", "Books & Notes": "Aa", Clothing: "◇", Keys: "⌘", "Cards & IDs": "▣", Bags: "⌂", Other: "?" };
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -21,7 +22,7 @@ function readImageFile(file: File) {
   });
 }
 
-function ItemForm({ item, users, busy, error, onClose, onSaved }: { item: Item | null; users: User[]; busy: boolean; error: string; onClose: () => void; onSaved: (event: FormEvent<HTMLFormElement>) => void }) {
+function ItemForm({ item, users, user, busy, error, onClose, onSaved }: { item: Item | null; users: User[]; user: AuthUser; busy: boolean; error: string; onClose: () => void; onSaved: (event: FormEvent<HTMLFormElement>) => void }) {
   const [imagePreview, setImagePreview] = useState(item?.imageUrl || "");
 
   function previewImage(event: ChangeEvent<HTMLInputElement>) {
@@ -46,8 +47,10 @@ function ItemForm({ item, users, busy, error, onClose, onSaved }: { item: Item |
         <label><span>Date lost or found</span><input name="occurredAt" type="date" required defaultValue={item ? item.occurredAt.slice(0, 10) : new Date().toISOString().slice(0, 10)} /></label>
       </div>
       <div className="form-grid two-columns">
+        {user.role === "admin" ? <>
         <label><span>Status</span><select name="status" defaultValue={item?.status || "found"}>{ITEM_STATUSES.map((status) => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select></label>
         <label><span>Reported by</span><select name="reporterId" required defaultValue={item?.reporterId || users[0]?.id || ""}><option value="" disabled>Choose a person</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name} · {user.role}</option>)}</select></label>
+        </> : <><input type="hidden" name="status" value={item?.status || "found"} /><input type="hidden" name="reporterId" value={user.id} /></>}
       </div>
       <label>
         <span>Item photo <em>optional</em></span>
@@ -72,7 +75,7 @@ function ItemForm({ item, users, busy, error, onClose, onSaved }: { item: Item |
   );
 }
 
-export function ItemManager() {
+export function ItemManager({ user }: { user: AuthUser }) {
   const [items, setItems] = useState<Item[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState("");
@@ -222,7 +225,7 @@ export function ItemManager() {
                 {!item.imageUrl && <span>{categoryMarks[item.category]}</span>}<StatusBadge status={item.status} />
               </div>
               <div className="item-card-body">
-                <div className="item-card-title"><div><small>{item.category}</small><h2>{item.name}</h2></div><div className="card-actions"><button className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}><Icon name="edit" /></button><button className="icon-button danger" onClick={() => void deleteItem(item)} aria-label={`Delete ${item.name}`}><Icon name="trash" /></button></div></div>
+                <div className="item-card-title"><div><small>{item.category}</small><h2>{item.name}</h2></div>{(user.role === "admin" || item.reporterId === user.id) && <div className="card-actions"><button className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}><Icon name="edit" /></button><button className="icon-button danger" onClick={() => void deleteItem(item)} aria-label={`Delete ${item.name}`}><Icon name="trash" /></button></div>}</div>
                 <p>{item.description}</p>
                 <div className="item-facts"><span><Icon name="pin" /> {item.location}</span><span><Icon name="calendar" /> {new Date(item.occurredAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span></div>
                 <div className="reported-by"><span className="mini-avatar">{getReporterName(item.reporterId)[0]}</span><span>Reported by <strong>{getReporterName(item.reporterId)}</strong></span><Link href={`/claims?item=${item.id}&new=1`}>Claim <Icon name="arrow" /></Link></div>
@@ -232,7 +235,7 @@ export function ItemManager() {
         </section>
       ) : <EmptyState icon="box" title="No matching reports" message="Try a different search or add the first item report." action={<button className="button button-primary" onClick={openCreate}><Icon name="plus" /> New report</button>} />}
 
-      {formOpen && <Modal title={editing ? "Edit item report" : "Report an item"} description="Accurate details make a safe reunion much more likely." onClose={closeForm}>{users.length ? <ItemForm item={editing} users={users} busy={busy} error={formError} onClose={closeForm} onSaved={saveItem} /> : <div className="modal-empty"><p>You need a registered person to act as the reporter.</p><Link className="button button-primary" href="/users?new=1">Add a person</Link></div>}</Modal>}
+      {formOpen && <Modal title={editing ? "Edit item report" : "Report an item"} description="Accurate details make a safe reunion much more likely." onClose={closeForm}>{users.length ? <ItemForm item={editing} users={users} user={user} busy={busy} error={formError} onClose={closeForm} onSaved={saveItem} /> : <div className="modal-empty"><p>Loading your campus profile…</p></div>}</Modal>}
     </main>
   );
 }

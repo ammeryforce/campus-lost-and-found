@@ -1,6 +1,7 @@
 import { MongoServerError, ObjectId, type WithId } from "mongodb";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { AuthError } from "@/lib/auth";
 import type {
   ApiResponse,
   Claim,
@@ -24,6 +25,7 @@ export function jsonError(error: string, status: number) {
 }
 
 export function handleApiError(error: unknown) {
+  if (error instanceof AuthError) return jsonError(error.message, error.status);
   if (error instanceof ZodError) {
     return NextResponse.json<ApiResponse<never>>(
       {

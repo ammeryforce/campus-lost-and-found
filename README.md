@@ -55,6 +55,15 @@ MONGODB_URI=mongodb://127.0.0.1:27017/campus_lost_found
 MONGODB_DB=campus_lost_found
 ```
 
+Set the first administrator account in `.env.local` before starting the app:
+
+```env
+INITIAL_ADMIN_EMAIL=admin@university.edu
+INITIAL_ADMIN_PASSWORD=use-a-long-unique-password
+```
+
+Visit `/login` and sign in with those credentials. The first login creates the administrator record. Other campus members can use **Create account**; they receive the standard user role. Administrators can manage all people, reports, and claims, while standard users can manage only their own reports and claims.
+
 For MongoDB Atlas, replace `MONGODB_URI` with the connection string shown in Atlas. Never commit `.env.local`; it can contain a database password.
 
 Start the application:
@@ -163,42 +172,53 @@ Suggested manual test order:
 
 ## Stage 6 — Prepare and deploy to a VM
 
-The included Docker Compose setup runs three containers:
+The production Docker Compose setup runs two containers:
 
 ```text
-Browser → Nginx on port 80 → Next.js on port 3000 → MongoDB
+Browser → Caddy (HTTPS) → Next.js on port 3000 → MongoDB Atlas
 ```
 
-On an Ubuntu VM:
+On an Azure Ubuntu VM:
 
-1. Install Docker Engine and the Docker Compose plugin.
-2. Copy or clone this project onto the VM.
-3. From the project directory, build and start it:
+1. Create a DNS **A** record such as `lostfound.example.edu` pointing to the VM public IP.
+2. In the Azure Network Security Group, allow inbound TCP ports **80** and **443** only. Do not expose port 3000 or MongoDB.
+3. In MongoDB Atlas Network Access, allow the VM's outbound public IP address.
+4. Install Docker Engine and the Docker Compose plugin, then copy or clone this project onto the VM.
+5. Create the production environment file without committing it:
 
 ```bash
-docker compose up -d --build
+cp .env.production.example .env.production
+chmod 600 .env.production
 ```
 
-4. Check the containers and application health:
+Set `MONGODB_URI`, `MONGODB_DB=campus-lost-and-found`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, and `DOMAIN` in `.env.production`.
+
+6. From the project directory, build and start it:
 
 ```bash
-docker compose ps
-curl http://localhost/api/health
+docker compose --env-file .env.production up -d --build
 ```
 
-5. Visit the VM’s public IP address in a browser.
+7. Check the containers and application health:
 
-MongoDB data is kept in the named `mongo_data` volume, so normal container recreation does not erase the records. Back up that volume before server migrations or destructive maintenance.
+```bash
+docker compose --env-file .env.production ps
+curl -fsS https://your-domain.example/api/health
+```
 
-For a public production deployment, point a domain at the VM and add HTTPS (for example, with Certbot or a TLS-enabled reverse proxy). Add authentication and authorization before allowing untrusted public users to access the admin CRUD screens.
+8. Visit the domain in a browser. Caddy requests and renews the HTTPS certificate automatically once the DNS record resolves to the VM.
+
+TLS certificates and Caddy configuration are kept in named volumes, so normal container recreation does not erase them. MongoDB data is stored in Atlas; enable Atlas backups there.
+
+The production setup uses Caddy for HTTPS and includes application authentication. Keep `.env.production` private, use a unique admin password, and rotate database credentials if they are ever exposed.
 
 Useful deployment commands:
 
 ```bash
-docker compose logs -f app
-docker compose restart app
-docker compose pull
-docker compose up -d --build
+docker compose --env-file .env.production logs -f app
+docker compose --env-file .env.production restart app
+docker compose --env-file .env.production pull
+docker compose --env-file .env.production up -d --build
 ```
 
 Do not run `docker compose down -v` unless you intentionally want to delete the MongoDB volume.
@@ -218,11 +238,10 @@ tests/                   Automated validation tests
 BEGINNER_GUIDE.md        Plain-language walkthrough of the code
 deploy/nginx.conf        VM reverse-proxy configuration
 Dockerfile               Production Next.js image
-compose.yaml             App, MongoDB, and Nginx services
+compose.yaml             App and HTTPS reverse-proxy services
+deploy/Caddyfile         HTTPS reverse-proxy and security headers
 ```
 
 ## Current scope and sensible next additions
 
 This version intentionally focuses on the requested CRUD system. Before a university-wide launch, the next additions should be sign-in, role-based authorization, controlled image uploads, rate limiting, audit logs, email notifications, and automatic database backups.
-add readme
-

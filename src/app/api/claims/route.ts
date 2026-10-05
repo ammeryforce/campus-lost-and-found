@@ -8,12 +8,14 @@ import {
 } from "@/lib/api";
 import { ACTIVE_ITEM_FILTER } from "@/lib/items";
 import { createClaimSchema } from "@/lib/validation";
+import { requireUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const currentUser = await requireUser();
     const { claims } = await getCollections();
     const documents = await claims
-      .find()
+      .find(currentUser.role === "admin" ? {} : { claimantId: parseId(currentUser.id)! })
       .sort({ createdAt: -1 })
       .limit(200)
       .toArray();
@@ -26,10 +28,11 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const currentUser = await requireUser();
     const body = await request.json();
     const input = createClaimSchema.parse(body);
     const itemId = parseId(input.itemId);
-    const claimantId = parseId(input.claimantId);
+    const claimantId = currentUser.role === "admin" ? parseId(input.claimantId) : parseId(currentUser.id);
     if (!itemId || !claimantId) return jsonError("Item or claimant not found.", 404);
 
     const { users, items, claims } = await getCollections();

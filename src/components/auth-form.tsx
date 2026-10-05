@@ -1,0 +1,10 @@
+"use client";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { apiRequest } from "@/lib/api-client";
+
+export function AuthForm() {
+  const router = useRouter(); const [mode, setMode] = useState<"login" | "register">("login"); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const form = new FormData(event.currentTarget); try { await apiRequest(`/api/auth/${mode}`, { method: "POST", body: JSON.stringify({ name: form.get("name"), email: form.get("email"), password: form.get("password") }) }); router.replace("/"); router.refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to sign in."); } finally { setBusy(false); } }
+  return <main className="auth-page"><section className="auth-card"><p className="eyebrow">Campus Lost &amp; Found</p><h1>{mode === "login" ? "Welcome back" : "Create your account"}</h1><p className="auth-copy">{mode === "login" ? "Sign in to report, track, and claim lost property." : "Student and staff accounts can report items and submit claims."}</p>{error && <p className="notice">{error}</p>}<form className="resource-form auth-form" onSubmit={submit}>{mode === "register" && <label><span>Full name</span><input name="name" required minLength={2} autoComplete="name" /></label>}<label><span>Campus email</span><input name="email" type="email" required autoComplete="email" /></label><label><span>Password</span><input name="password" type="password" required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label><button className="button button-primary" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}</button></form><button type="button" className="auth-switch" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }}>{mode === "login" ? "New here? Create a user account" : "Already have an account? Log in"}</button></section></main>;
+}

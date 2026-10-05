@@ -41,6 +41,13 @@ svg { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
 .nav-link.active::after { background: var(--primary); }
 .header-profile { position: relative; margin-left: auto; display: flex; align-items: center; gap: .65rem; }
 .header-profile strong { font-size: .8rem; }
+.logout-button, .auth-switch { border: 0; color: var(--primary); background: transparent; cursor: pointer; font-size: .72rem; font-weight: 800; }
+.logout-button { margin-left: .2rem; }
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; background: linear-gradient(135deg, #eeecff, #faf9fd 45%, #eeeaff); }
+.auth-card { width: min(450px, 100%); padding: 2.35rem; border: 1px solid var(--line); border-radius: 24px; background: white; box-shadow: var(--shadow); }
+.auth-card h1 { margin: 0; font-family: Georgia, serif; font-size: 2.35rem; font-weight: 500; letter-spacing: -.04em; }
+.auth-copy { margin: .8rem 0 .4rem; color: var(--muted); font-size: .86rem; line-height: 1.55; }
+.auth-form { padding-right: 0; padding-left: 0; }.auth-form .button { margin-top: .3rem; }.auth-switch { margin-top: .7rem; padding: .3rem 0; }
 .avatar, .mini-avatar, .person-avatar { display: grid; place-items: center; border-radius: 50%; color: #453bbf; background: #e7e4ff; font-weight: 800; }
 .avatar { width: 36px; height: 36px; font-size: .72rem; }
 .online-dot { position: absolute; z-index: 1; left: 27px; bottom: 1px; width: 9px; height: 9px; border: 2px solid white; border-radius: 50%; background: #22b47b; }

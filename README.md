@@ -159,3 +159,8 @@ Findly currently includes CRUD operations, sign-in, role-based access, item imag
 - Rate limiting and audit logs.
 - Email notifications for claim updates.
 - A documented backup and recovery process.
+
+This project is done by the following members:
+- SENG BAN NU (6622007)
+- SEIN TUN TUCK (6622152)
+- MIN HTET (6622085)
